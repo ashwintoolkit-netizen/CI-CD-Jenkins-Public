@@ -44,24 +44,24 @@ pipeline {
     stage('Deploy to Server') {
       steps {
         sshagent(['deploy-ssh-key']) {
-          sh '''
-ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
-echo " Deploy started on $(hostname)"
-docker pull ashwinapple/ci-cd-jenkins:latest
+          sh """
+            ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
+              echo " Deploy started on \$(hostname)"
 
-docker stop flask-app || true
-docker rm flask-app || true
+              docker pull ${DOCKER_BFLASK_IMAGE} &&
+              docker stop ${DEPLOY_CONTAINER} || true &&
+              docker rm ${DEPLOY_CONTAINER} || true &&
 
-docker run -d \
-  --restart unless-stopped \
-  --name flask-app \
-  -p 5000:5000 \
-  ashwinapple/ci-cd-jenkins:latest
+              docker run -d \
+                --restart unless-stopped \
+                --name ${DEPLOY_CONTAINER} \
+                -p 5000:5000 \
+                ${DOCKER_BFLASK_IMAGE}
 
-docker ps | grep flask-app
-echo "Deploy completed"
-EOF
-'''
+              docker ps | grep ${DEPLOY_CONTAINER}
+              echo " Deploy completed"
+            '
+          """
         }
       }
     }
