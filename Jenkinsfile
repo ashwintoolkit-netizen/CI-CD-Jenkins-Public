@@ -22,6 +22,7 @@ pipeline {
 
     stage('Deploy') {
       steps {
+
         withCredentials([
           usernamePassword(
             credentialsId: 'a11330ee-1fd5-49ca-b55c-6e0c5e6dd961',
@@ -32,6 +33,17 @@ pipeline {
           sh '''
             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
             docker push $DOCKER_BFLASK_IMAGE
+          '''
+        }
+
+        sshagent(['deploy-ssh-key']) {
+          sh '''
+            ssh -o StrictHostKeyChecking=no comtel@192.168.101.62 << 'EOF'
+              docker pull ashwinapple/ci-cd-jenkins:latest
+              docker stop flask-app || true
+              docker rm flask-app || true
+              docker run -d --name flask-app -p 5000:5000 ashwinapple/ci-cd-jenkins:latest
+            EOF
           '''
         }
       }
